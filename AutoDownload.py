@@ -1,50 +1,70 @@
-import requests
-from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
 
-# Log in to the website
+# Set up the Chrome WebDriver
+driver = webdriver.Chrome()
+
+# Navigate to the login page
+driver.get("https://sso.teachable.com/secure/146684/identity/login/password")
+
 try:
-    session = requests.Session()
-    login_data = {
-        'username': 'a.joseph.192@westcliff.edu',
-        'password': '$DMiS.qm&yY=Z3C'
-    }
-    response = session.post('https://example.com/login', data=login_data)
+    # Replace with your actual login credentials
+    email = "a.joseph.192@westcliff.edu"
+    password = "$DMiS.qm&yY=Z3C"
 
-    if response.status_code != 200:
-        raise Exception('Login failed. Check login credentials.')
+    # Wait for the email input field to be present (you may need to adjust the timeout)
+    email_input = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.NAME, "login[email]"))
+    )
+
+    # Find the password input field
+    password_input = driver.find_element(By.NAME, "login[password]")
+
+    # Enter the credentials
+    email_input.send_keys(email)
+    password_input.send_keys(password)
+
+    # Submit the login form
+    password_input.send_keys(Keys.ENTER)
+
+    # Wait for some time to ensure the login is complete (you may need to adjust this)
+    time.sleep(5)
+
+    # Navigate to the page with the videos
+    driver.get("https://members.codewithmosh.com/courses/enrolled/240431")
+
 except Exception as e:
-    print(f'Error during login: {e}')
+    print(f"Error during login: {e}")
+    driver.quit()
     exit(1)
 
-# Scrape the website for video links
-url = 'https://members.codewithmosh.com/courses/enrolled/240431'
-response = session.get(url)
-soup = BeautifulSoup(response.text, 'html.parser')
-video_links = []
+# Wait for the page to load (you may need to adjust this)
+time.sleep(5)
 
-for link in soup.find_all('a'):
-    href = link.get('href')
-    if href.endswith('.mp4'):
+# Find and print the video links
+video_links = []
+for link in driver.find_elements(By.TAG_NAME, "a"):
+    href = link.get_attribute("href")
+    if href and href.endswith('.mp4'):
         video_links.append(href)
 
 # Download the videos
 for link in video_links:
     try:
-        response = requests.get(link, stream=True)
+        driver.get(link)
 
-        if response.headers['Content-Type'] != 'video/mp4':
-            continue
+        # Wait for the video to load (you may need to adjust this)
+        time.sleep(5)
 
-        total_size = int(response.headers['Content-Length'])
-        downloaded_size = 0
-
-        with open(link.split('/')[-1], 'wb') as f:
-            for chunk in response.iter_content(chunk_size=1024):
-                downloaded_size += len(chunk)
-                f.write(chunk)
-
-                progress = int(downloaded_size / total_size * 100)
-                print(f'Downloading {link} - {progress}% complete')
+        # Add code here to download the video
+        # ...
 
     except Exception as e:
         print(f'Error downloading video {link}: {e}')
+
+# Close the browser
+driver.quit()
